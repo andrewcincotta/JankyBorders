@@ -14,10 +14,11 @@ make debug    # -O0 -DDEBUG -> bin/debug (enables debug() logging and a raw SkyL
 make asan     # ASan/UBSan build -> bin/debug, then runs it right away
 make run      # stop any local build, rebuild debug, run bin/debug in the foreground (Ctrl+C stops it)
 make stop     # kill any running bin/borders or bin/debug (never the Homebrew /opt/homebrew/bin/borders)
+make test     # build and run tests/color_style_test.c (color parsing and glow blending)
 make clean    # deletes bin/ only; it does not stop a running instance
 ```
 
-There's no test suite or linter. To check a change, use `make run` and look at real windows. For a debugger, use `lldb ./bin/debug`, then `run`.
+`make test` is the only automated test. It `#include`s `src/parse.c` directly, so it covers `parse_settings` and the color helpers in `misc/drawing.h`. There's no linter. For anything that draws or tracks windows, use `make run` and look at real windows. For a debugger, use `lldb ./bin/debug`, then `run`.
 
 Only one instance can own the server port. If one is already running, a new binary forwards its arguments to it and exits ("A borders instance is already running..." when given no args). The debug build's process is named `debug`, not `borders`, so `pkill borders`, Activity Monitor and Raycast searches for "borders" won't find it. Use `make stop` or `pgrep -fl bin/debug`. A Homebrew `borders` started from yabairc or `brew services` also holds the port and must be stopped separately.
 
@@ -36,6 +37,8 @@ When bumping the version, update `MAJOR`/`MINOR`/`PATCH` in `src/main.c`.
 
 ### Settings and update masks
 `parse_settings` (`parse.c`) is shared by the CLI and runtime paths. It returns a bitmask (`BORDER_UPDATE_MASK_*` in `parse.h`) that picks how much work to do: redraw active only, inactive only, all, or `RECREATE_ALL`. `RECREATE_ALL` destroys and re-creates every border window, and is needed for `hidpi` and `blacklist`/`whitelist` changes. A new option needs a parse branch and the right mask bit, and should be documented in `docs/borders.1.scd`.
+
+A color is a `struct color_style` (`border.h`): `stype` is `COLOR_STYLE_SOLID` or `COLOR_STYLE_GRADIENT`, and `glow` is a separate flag, so `glow(gradient(...))` works. `parse_color` requires the whole token to match (`%n` check) and leaves the old value untouched on failure. For a gradient glow, `border_draw` uses one shadow color, the alpha-weighted blend of the two endpoints (`colors_mix` in `misc/drawing.h`). `background_color` rejects gradients.
 
 `border_get_settings()` returns either the per-border override or `g_settings`. It asserts it's on the main thread.
 
