@@ -11,6 +11,13 @@ asan: | bin
 	clang -std=c99 -Wall -g -fsanitize=address -fsanitize=undefined -fno-omit-frame-pointer -g $(FILES) -o bin/debug $(LIBS)
 	./bin/debug
 
+run: stop debug
+	./bin/debug
+
+stop:
+	@pkill -f '(^|\./|/JankyBorders/)bin/(borders|debug)( |$$)' || true
+	@while pgrep -f '(^|\./|/JankyBorders/)bin/(borders|debug)( |$$)' > /dev/null; do sleep 0.1; done
+
 bin:
 	mkdir bin
 
